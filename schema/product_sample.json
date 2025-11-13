@@ -1,0 +1,34 @@
+{
+    "idp": 2024,
+    "name": "AquaPulse Swim Tracker",
+    "brand": "NaiadLab",
+    "description": "Connected swim tracker designed for pool and open-water training, with real-time metrics and session history.",
+    "image_url": "https://example.com/aquapulse_swim_tracker.jpg",
+    "price": {
+      "value": 189.90,
+      "currency": "EUR",
+      "vat_rate": 0.20
+    },
+    "categories": [
+      {
+        "id": 10,
+        "title": "Sport"
+      },
+      {
+        "id": 11,
+        "title": "Wearable"
+      },
+      {
+        "id": 12,
+        "title": "Swimming"
+      }
+    ],
+    "supplier": {
+      "ids": 314,
+      "name": "BlueWave Distribution",
+      "siret": "90234567800021",
+      "headOffice": "Courbevoie, France",
+      "revenue": 12500000
+    }
+  }
+  

@@ -1,0 +1,13 @@
+{
+    "nb_clients": 1000000,
+    "nb_products": 100000,
+    "nb_orderlines": 4000000000,
+    "nb_warehouses": 200,
+    "orders_per_client": 100,
+    "avg_products_per_order": 20,
+    "avg_categories_per_product": 2,
+    "distinct_brands": 5000,
+    "nb_apple_products": 50,
+    "nb_servers": 1000
+  }
+  
