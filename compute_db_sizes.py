@@ -1,6 +1,5 @@
 import json
 from bigdata.sizes import compute_document_size_from_schema, bytes_to_gb
-from bigdata.models import Collection
 
 
 def load_json(path):
