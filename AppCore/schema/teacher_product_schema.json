@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Teacher_Product_Wrapped",
+  "type": "object",
+  "properties": {
+    "product": {
+      "type": "object",
+      "properties": {
+        "IDP": { "type": "integer" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "brand": { "type": "string" },
+        "description": { "type": "string" },
+        "image_url": { "type": "string" },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" }
+            },
+            "required": ["title"]
+          }
+        },
+        "supplier": {
+          "type": "object",
+          "properties": {
+            "IDS": { "type": "integer" },
+            "name": { "type": "string" },
+            "SIRET": { "type": "string" },
+            "headOffice": { "type": "string" },
+            "revenue": { "type": "number" }
+          },
+          "required": ["IDS", "name", "SIRET", "headOffice", "revenue"]
+        },
+        "stock": {
+          "type": "object",
+          "properties": {
+            "IDP": { "type": "integer" },
+            "IDW": { "type": "integer" },
+            "quantity": { "type": "integer" },
+            "location": { "type": "string" }
+          },
+          "required": ["IDP", "IDW", "quantity", "location"]
+        },
+        "Warehouse": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": true
+        },
+        "orderLine": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": true
+        },
+        "Client": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "IDP",
+        "name",
+        "price",
+        "brand",
+        "description",
+        "image_url",
+        "categories",
+        "supplier",
+        "stock"
+      ]
+    }
+  },
+  "required": ["product"]
+}

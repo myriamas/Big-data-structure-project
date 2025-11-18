@@ -1,0 +1,63 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "DB3_Stock",
+    "type": "object",
+    "properties": {
+      "idw": { "type": "integer" },
+      "quantity": { "type": "integer" },
+      "location": { "type": "string" },
+      "product": {
+        "type": "object",
+        "properties": {
+          "idp": { "type": "integer" },
+          "name": { "type": "string" },
+          "brand": { "type": "string" },
+          "description": { "type": "string" },
+          "image_url": { "type": "string" },
+          "price": {
+            "type": "object",
+            "properties": {
+              "value": { "type": "number" },
+              "currency": { "type": "string" },
+              "vat_rate": { "type": "number" }
+            },
+            "required": ["value", "currency", "vat_rate"]
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "title": { "type": "string" }
+              },
+              "required": ["id", "title"]
+            }
+          },
+          "supplier": {
+            "type": "object",
+            "properties": {
+              "ids": { "type": "integer" },
+              "name": { "type": "string" },
+              "siret": { "type": "string" },
+              "headOffice": { "type": "string" },
+              "revenue": { "type": "number" }
+            },
+            "required": ["ids", "name", "siret", "headOffice", "revenue"]
+          }
+        },
+        "required": [
+          "idp",
+          "name",
+          "brand",
+          "description",
+          "image_url",
+          "price",
+          "categories",
+          "supplier"
+        ]
+      }
+    },
+    "required": ["idw", "quantity", "location", "product"]
+  }
+  
