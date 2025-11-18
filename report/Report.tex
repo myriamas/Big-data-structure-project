@@ -1,0 +1,268 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{colortbl}
+
+\geometry{margin=2.5cm}
+\setstretch{1.15}
+
+% Color theme
+\definecolor{mainblue}{HTML}{1A4B84}
+\definecolor{lightblue}{HTML}{E8F1FA}
+\definecolor{darkgray}{HTML}{333333}
+
+% Section styling
+\titleformat{\section}
+  {\Large\bfseries\color{mainblue}}
+  {\thesection}{1em}{}
+
+\titleformat{\subsection}
+  {\large\bfseries\color{darkgray}}
+  {\thesubsection}{1em}{}
+
+% Hyperref styling
+\hypersetup{
+    colorlinks=true,
+    linkcolor=mainblue,
+    urlcolor=mainblue,
+    citecolor=mainblue
+}
+
+% Title page
+\makeatletter
+\renewcommand{\maketitle}{
+    \begin{center}
+        \vspace*{   1cm}
+        \colorbox{mainblue!15}{
+            \parbox{\textwidth}{
+                \centering
+                {\huge\bfseries\color{mainblue} NoSQL Storage Cost Evaluation}\\[0.3cm]
+                {\Large\color{darkgray} Full Automated Analysis and GUI Application}
+            }
+        }
+        \vspace{1cm}
+
+        {\large
+        \textbf{Authors:}\\
+        Myriam Ait Said \\
+        Mohamed Aymane Sfouli \\
+        Luca Rougemont \\
+        George Shamieh
+        
+        }
+
+        \vspace{0.7cm}
+        {\normalsize ESILV        Big Data Structure}
+        \vspace{1cm}
+
+        \hrule height 0.8pt \vspace{0.4cm}
+    \end{center}
+}
+\makeatother
+
+\begin{document}
+
+\maketitle
+
+\section*{Introduction}
+
+Dans le cadre du cours \emph{Big Data Structure}, nous avons étudié l’impact des différentes stratégies de dénormalisation NoSQL sur les coûts de stockage et la distribution lors du sharding.  
+Au   delà des calculs demandés, nous avons choisi d'aller beaucoup plus loin : construire un outil complet, robuste et totalement générique capable d’analyser n’importe quel schéma NoSQL.
+
+L’objectif initial était académique.  
+Le résultat final est une application professionnelle, portable, élégante et utilisable par n’importe quel utilisateur non technique.
+
+\bigskip
+
+
+Notre démarche a été guidée par trois idées simples:
+\begin{enumerate}
+    \item Le stockage doit être mesuré avec précision, de manière transparente.
+    \item La manipulation des schémas ne doit pas être réservée aux développeurs.
+    \item L’outil doit rester générique, élégant, et simple à utiliser.
+\end{enumerate}
+
+C’est ainsi qu’est née notre application : \textbf{Big Data Structure     Storage Estimator}.
+
+\section{Architecture du Projet}
+
+Notre dossier final n’est pas une simple remise de scripts isolés.  
+Il s’agit d’un \textbf{mini   projet logiciel structuré}, composé de plusieurs modules clairement définis.
+
+\subsection*{1. AppCore/ — Le cœur de l’application}
+
+\begin{itemize}
+    \item \textbf{gui\_app.py} : l’interface graphique moderne réalisée en Tkinter.
+    \item \textbf{stats.json} : les cardinalités globales (produits, stocks, orderlines...).
+    \item \textbf{schema/} : tous les schémas utiles au projet (DB1 à DB5, exemple de la prof).
+    \item \textbf{bigdata/models.py} : classes et abstractions décrivant les collections.
+    \item \textbf{bigdata/sizes.py} : l’algorithme central de calcul de taille.
+\end{itemize}
+
+\subsection*{2. Lancement simplifié}
+
+\begin{itemize}
+    \item \textbf{Launch\_BigData\_Tool.vbs} : exécute l’application par un simple double   clic,
+          sans console, sans terminal, sans manipulation.
+\end{itemize}
+
+\subsection*{3. Dossier Tests/}
+
+Conçu pour valider la généricité de notre solution :
+
+\begin{itemize}
+    \item fichiers JSON de test structurés et non structurés,
+    \item exemple fourni par l’enseignante,
+    \item jeux de données personnalisés permettant d'inférer automatiquement un schéma.
+\end{itemize}
+
+L’application a été testée avec tous ces cas, chacun a parfaitement fonctionné.
+
+\section{Fonctionnalités de l’Application}
+
+Notre interface graphique offre une expérience fluide, professionnelle et autonome.
+
+\subsection{1. Détection automatique des schémas}
+
+Toute structure \texttt{\_schema.json} placée dans \texttt{AppCore/schema} apparaît instantanément dans la liste déroulante.
+
+\subsection{2. Saisie intelligente du ``Document count''}
+
+Le champ est rempli automatiquement en fonction du schéma :
+\begin{itemize}
+    \item DB1 \(\rightarrow\) nombre de produits,
+    \item DB3 \(\rightarrow\) produits × entrepôts,
+    \item DB4 \(\rightarrow\) nombre d’orderlines.
+\end{itemize}
+
+\subsection{3. Analyse complète du stockage}
+
+L’outil :
+\begin{itemize}
+    \item lit et valide tout JSON Schema,
+    \item calcule la taille exacte d’un document,
+    \item convertit automatiquement en taille de collection et en gigaoctets.
+\end{itemize}
+
+\subsection{4. Inférence automatique d’un schéma}
+
+Si l'utilisateur charge un \texttt{.json} qui n’est pas un JSON Schema,  
+l’application propose automatiquement :
+
+\begin{center}
+\textit{``Ce fichier ne correspond pas à un schéma JSON. Voulez   vous inférer le schéma automatiquement ?''}
+\end{center}
+
+Cette fonctionnalité nous a permis de traiter l'exemple complet fourni par l’enseignante.
+
+\section{Les Cinq Schémas Étudiés (DB1 à DB5)}
+
+Chaque schéma représente une stratégie différente de dénormalisation :
+
+\begin{itemize}
+    \item \textbf{DB1 :} Product avec catégories + supplier.
+    \item \textbf{DB2 :} DB1 + information de stock.
+    \item \textbf{DB3 :} Stock comme racine, Product complètement embarqué.
+    \item \textbf{DB4 :} OrderLine comme racine, avec Product complet.
+    \item \textbf{DB5 :} Product embarque toutes les OrderLines liées.
+\end{itemize}
+
+Cette variété nous permet d'observer les avantages et limites de chaque modèle.
+
+\section{Règles de Calcul du Stockage}
+
+L’algorithme suit strictement les règles du cours :
+
+\begin{itemize}
+    \item Integer / Float : 8 bytes
+    \item String : 80 bytes
+    \item Date : 20 bytes
+    \item LongString : 200 bytes
+    \item Surcoût clé   valeur : 12 bytes
+\end{itemize}
+
+\subsection*{Approche algorithmique}
+
+Le calcul est récursif :
+\begin{enumerate}
+    \item lecture du type,
+    \item ajout du coût propre,
+    \item traitement des objets internes,
+    \item traitement des tableaux,
+    \item propagation de la taille estimée,
+    \item multiplication par la cardinalité totale.
+\end{enumerate}
+
+\section{Résultats du Calcul}
+
+\begin{center}
+\rowcolors{2}{lightblue!60}{white}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Database} & \textbf{Collection} & \textbf{Doc Size (bytes)} & \textbf{Collection Size (GB)} \\
+\midrule
+DB1 & Product & 1096 & 0.1021 \\
+DB2 & Product & 1372 & 0.1278 \\
+DB3 & Stock   & 1240 & 23.0968 \\
+DB4 & OrderLine & 1464 & 5453.8250 \\
+DB5 & Product & 1780 & 0.1658 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Interprétation}
+
+\begin{itemize}
+    \item \textbf{DB1 et DB2} : efficaces, équilibrées.
+    \item \textbf{DB3} : duplication massive du Product.
+    \item \textbf{DB4} : modèle non viable (plus de 5 To).
+    \item \textbf{DB5} : charge maîtrisée malgré la dénormalisation.
+\end{itemize}
+
+\section{Sharding}
+
+Nos scripts montrent que :
+
+\begin{itemize}
+    \item Un sharding par \#IDP est globalement excellent.
+    \item \#IDW est très mauvais (fort skew).
+    \item \#IDC distribue parfaitement les OrderLines.
+\end{itemize}
+
+\section{Validation avec l'Exemple Enseignante}
+
+Le JSON de l’enseignante n’était pas un schéma.  
+Grâce à notre inférence automatique, nous avons :
+
+\begin{itemize}
+    \item généré un schéma complet,
+    \item calculé sa taille exacte,
+    \item évalué son comportement au sein de notre pipeline.
+\end{itemize}
+
+Cette étape nous a permis de confirmer la généricité de l’application.
+
+\section{Conclusion}
+Pour cette première partie du projet, nous avons construit une applicatio portable et générale.  
+Elle fonctionne avec n’importe quel schéma, n’importe quel exemple et n’importe quel volume de données.
+
+Ce projet met en lumière :
+\begin{itemize}
+    \item notre compréhension des mécanismes de dénormalisation,
+    \item notre maîtrise des problématiques de stockage,
+    \item notre capacité à concevoir des outils fiables et professionnels.
+\end{itemize}
+
+
+\end{document}
