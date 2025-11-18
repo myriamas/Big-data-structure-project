@@ -1,0 +1,46 @@
+{
+  "user_id": 982731,
+  "username": "myriam_ai",
+  "email": "myriam@example.com",
+  "age": 22,
+  "premium": true,
+  "bio": "Data engineering student passionate about parallel computing, HPC and AI.",
+  "preferences": {
+    "theme": "dark",
+    "language": "fr",
+    "notifications": {
+      "email": true,
+      "push": false,
+      "sms": false
+    }
+  },
+  "fitness_stats": {
+    "height_cm": 167,
+    "weight_kg": 55,
+    "goals": ["run_10k", "swim_3k", "improve_strength"]
+  },
+  "payments": [
+    {
+      "card_last4": "4928",
+      "type": "visa",
+      "created_at": "2024-11-02T10:30:00Z"
+    },
+    {
+      "card_last4": "3821",
+      "type": "mastercard",
+      "created_at": "2023-07-10T15:12:54Z"
+    }
+  ],
+  "history": [
+    {
+      "login": "2025-02-10T09:24:18Z",
+      "device": "Windows PC",
+      "country": "France"
+    },
+    {
+      "login": "2025-02-09T20:11:05Z",
+      "device": "iPhone 15 Pro",
+      "country": "Morocco"
+    }
+  ]
+}
