@@ -15,8 +15,9 @@ This **application** is capable of:
 - Evaluating sharding distribution for different keys.
 - Providing an intuitive GUI for non-technical users.
 
-The tool is fully portable and can be launched by double-click—no terminal required.
+The tool is fully portable and can be launched by double click on the launcher.
 
  
+
 
 
