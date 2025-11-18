@@ -9,7 +9,7 @@ def load_json(path):
 
 
 if __name__ == "__main__":
-    product_schema = load_json("schema/product_schema.json")
+    product_schema = load_json("schema/teacher_product_schema.json")
     stats = load_json("stats.json")
 
     nb_products = stats["nb_products"]

@@ -1,0 +1,30 @@
+{
+  "product": {
+    "IDP": 1,
+    "name": "iPhone 16",
+    "price": 1299.99,
+    "brand": "Apple",
+    "description": "dfgqbvpoebg",
+    "image_url": "febgqvobo",
+    "categories":[
+      { "title": "Smartphone" },
+      { "title": "camera" }
+    ],
+    "supplier": {
+      "IDS": 2,
+      "name": "FNAC",
+      "SIRET": "dfvbIOB3",
+      "headOffice": "gRTHDB",
+      "revenue": 12865376
+    },
+    "stock": {
+      "IDP": 1,
+      "IDW": 5,
+      "quantity": 50,
+      "location": "fhbvqeg"
+    },
+    "Warehouse": {},
+    "orderLine": {},
+    "Client": {}
+  }
+}
