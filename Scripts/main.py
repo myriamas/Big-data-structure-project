@@ -1,3 +1,6 @@
+"""Script basique de démonstration
+ (calcule taille collection Product)"""
+
 import json
 from bigdata.models import Collection
 from bigdata.sizes import compute_document_size_from_schema, compute_collection_size_bytes, bytes_to_gb

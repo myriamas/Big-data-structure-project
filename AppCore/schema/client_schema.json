@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Client",
+  "type": "object",
+  "properties": {
+    "idc": { "type": "integer" },
+    "name": { "type": "string" },
+    "email": { "type": "string" },
+    "address": { "type": "string" },
+    "phone": { "type": "string" }
+  },
+  "required": ["idc", "name", "email", "address", "phone"]
+}

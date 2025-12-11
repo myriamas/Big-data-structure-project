@@ -1,12 +1,29 @@
+"""
+Storage size computation module for NoSQL collections.
+
+This module provides functions to calculate the approximate storage size
+of JSON documents based on their schema, following standard NoSQL sizing rules.
+
+Sizing Rules:
+- Integer/Number: 8 bytes
+- String: 80 bytes (average)
+- Date: 20 bytes
+- LongString (description, comment): 200 bytes
+- Key+Value overhead: 12 bytes per field
+- Arrays: 2 elements on average
+
+The module uses recursive computation to handle nested objects and arrays.
+"""
+
 TYPE_SIZES = {
-    "integer": 8,
-    "number": 8,
-    "string": 80,
-    "date": 20,
-    "longstring": 200,
+    "integer": 8,       # 64-bit integer
+    "number": 8,        # 64-bit float
+    "string": 80,       # Average string length
+    "date": 20,         # Date string representation
+    "longstring": 200,  # Long textual fields
 }
 
-KEY_OVERHEAD = 12
+KEY_OVERHEAD = 12  # Overhead per key/value pair or array field
 
 
 def compute_document_size_from_schema(schema):

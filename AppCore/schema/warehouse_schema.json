@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Warehouse",
+  "type": "object",
+  "properties": {
+    "idw": { "type": "integer" },
+    "name": { "type": "string" },
+    "location": { "type": "string" },
+    "capacity": { "type": "integer" }
+  },
+  "required": ["idw", "name", "location", "capacity"]
+}

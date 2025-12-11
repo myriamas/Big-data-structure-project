@@ -1,3 +1,8 @@
+"""Interface graphique Tkinter complète
+Découvre automatiquement les fichiers *_schema.json
+Charge les schémas et évalue les tailles de collections
+Interface intuitive pour utilisateurs non-techniques"""
+
 import os
 import json
 import tkinter as tk
@@ -8,6 +13,12 @@ from bigdata.sizes import (
     compute_document_size_from_schema,
     compute_collection_size_bytes,
     bytes_to_gb,
+)
+from bigdata.operators import (
+    filter_with_sharding,
+    filter_without_sharding,
+    nested_loop_with_sharding,
+    nested_loop_without_sharding,
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -123,6 +134,13 @@ class BigDataGui(tk.Tk):
 
         self.schema_files = discover_schema_files()
 
+        # Create application menu (Tools -> Operators)
+        try:
+            self._create_menubar()
+        except Exception:
+            # non-fatal: continue without menubar if platform/theme disallows it
+            pass
+
 
         self._configure_style()
         self._create_widgets()
@@ -161,6 +179,11 @@ class BigDataGui(tk.Tk):
         main = ttk.Frame(self, padding=15)
         main.pack(fill=tk.BOTH, expand=True)
 
+        # Small toolbar (non-intrusive) with quick access to Operators
+        toolbar = ttk.Frame(main)
+        toolbar.grid(row=0, column=4, sticky=tk.E)
+        ttk.Button(toolbar, text="Operators", command=self._show_operators_dialog).pack(side=tk.RIGHT)
+
         # Title without custom style/background
         title = ttk.Label(
             main,
@@ -197,14 +220,14 @@ class BigDataGui(tk.Tk):
 
         ttk.Button(
             main,
-            text="Run",
+            text="[Run]",
             style="Blue.TButton",
             command=self._run_computation,
         ).grid(row=2, column=2, padx=5, pady=5)
 
         ttk.Button(
             main,
-            text="Infer from sample...",
+            text="[Infer from sample]",
             command=self._infer_from_sample_dialog,
         ).grid(row=2, column=3, padx=5, pady=5)
 
@@ -221,6 +244,16 @@ class BigDataGui(tk.Tk):
         )
         info.grid(row=3, column=0, columnspan=4, sticky=tk.W, pady=(8, 5))
 
+        # Advanced Options (subtle)
+        options_frame = ttk.Frame(main)
+        options_frame.grid(row=3, column=0, columnspan=4, sticky=tk.W, pady=(15, 5))
+        
+        ttk.Label(options_frame, text="Options:", font=("Segoe UI", 9), foreground="#888").pack(side=tk.LEFT)
+        ttk.Button(options_frame, text="[Compare DBs]", command=self._show_db_comparison).pack(side=tk.LEFT, padx=5)
+        ttk.Button(options_frame, text="[Full DB Size]", command=self._show_full_db_size).pack(side=tk.LEFT, padx=2)
+        ttk.Button(options_frame, text="[Sharding Analysis]", command=self._show_sharding).pack(side=tk.LEFT, padx=2)
+        ttk.Button(options_frame, text="[Operators]", command=self._show_operators_dialog).pack(side=tk.LEFT, padx=2)
+
         ttk.Label(main, text="Output:", style="Body.TLabel").grid(row=4, column=0, sticky=tk.NW, pady=(10, 0))
 
         self.output = tk.Text(
@@ -236,6 +269,19 @@ class BigDataGui(tk.Tk):
 
         main.rowconfigure(4, weight=1)
         main.columnconfigure(1, weight=1)
+
+    def _create_menubar(self):
+        """Create the application menubar with Tools -> Operators."""
+        menubar = tk.Menu(self)
+        tools_menu = tk.Menu(menubar, tearoff=0)
+        tools_menu.add_command(label="Operators...", command=self._show_operators_dialog)
+        menubar.add_cascade(label="Tools", menu=tools_menu)
+        try:
+            self.config(menu=menubar)
+        except Exception:
+            # Some platforms or window managers may not support menu configuration
+            # gracefully; ignore if this fails.
+            pass
 
     def _refresh_schema_list(self):
         self.schema_files = discover_schema_files()
@@ -401,6 +447,211 @@ class BigDataGui(tk.Tk):
             f"File: {sample_path}"
         )
         self._compute_and_display(collection, extra_header=header)
+
+    def _show_db_comparison(self):
+        """Compare all DB1-DB5 variants"""
+        self.output.delete(1.0, tk.END)
+        self.output.insert(tk.END, "=== DB1-DB5 COMPARISON ===\n\n")
+        self.output.insert(tk.END, "Run 'python Scripts/compute_db_sizes.py' in terminal for detailed comparison.\n\n")
+        
+        comparison_text = """DB1: Normalized (separate collections)
+  - Product: 0.1132 GB
+  - Stock: 25.3320 GB
+  - OrderLine: 5900.8598 GB
+  - Total: 5926.67 GB
+
+DB2: Product + Stocks imbriqués
+  - Total: 5901.36 GB
+
+DB3: Stock as root + Product imbriqué
+  - Total: 5926.55 GB
+
+DB4: OrderLine as root + Product imbriqué
+  - Total: 5926.55 GB
+
+DB5: Product + OrderLines imbriqués (OPTIMAL)
+  - Total: 25.87 GB
+
+VERDICT: DB5 is 229x more efficient than DB1!
+"""
+        self.output.insert(tk.END, comparison_text)
+
+    def _show_full_db_size(self):
+        """Show full database size with all collections"""
+        self.output.delete(1.0, tk.END)
+        self.output.insert(tk.END, "=== FULL DATABASE SIZE ===\n\n")
+        
+        if not self.schema_var.get():
+            messagebox.showwarning("Warning", "Please select a schema first.")
+            return
+        
+        schema_path = self.schema_files[self.schema_combo.current()]
+        schema = load_json(schema_path)
+        
+        try:
+            doc_count = int(self.doc_count_var.get())
+        except ValueError:
+            messagebox.showerror("Error", "Document count must be a valid integer.")
+            return
+        
+        collection = Collection(schema=schema, name=os.path.basename(schema_path), stats=self.stats, document_count=doc_count)
+        
+        output_text = f"Collection: {collection.name}\n"
+        output_text += f"Documents: {doc_count:,}\n"
+        doc_size = compute_document_size_from_schema(schema)
+        coll_size_bytes = compute_collection_size_bytes(collection)
+        coll_size_gb = bytes_to_gb(coll_size_bytes)
+        
+        output_text += f"\nDocument size: {doc_size} bytes\n"
+        output_text += f"Collection size: {coll_size_gb:.4f} GB\n"
+        output_text += f"Collection size: {coll_size_bytes:,} bytes\n"
+        
+        self.output.insert(tk.END, output_text)
+
+    def _show_sharding(self):
+        """Show sharding distribution analysis"""
+        self.output.delete(1.0, tk.END)
+        self.output.insert(tk.END, "=== SHARDING ANALYSIS ===\n\n")
+        self.output.insert(tk.END, "Run 'python Scripts/compute_sharding_stats.py' in terminal for detailed analysis.\n\n")
+        
+        sharding_text = """Key Sharding Strategies (1000 servers):
+
+Stock Collection:
+  St - #IDP:  20,000 docs/server, 100 keys/server [EXCELLENT]
+  St - #IDW:  20,000 docs/server, 0.2 keys/server [POOR - hotspots]
+
+OrderLine Collection:
+  OL - #IDC:  4M docs/server, 1,000 keys/server [GOOD]
+  OL - #IDP:  4M docs/server, 100 keys/server [OK - watch hotspots]
+
+Product Collection:
+  Prod - #IDP:    100 docs/server, 100 keys/server [EXCELLENT]
+  Prod - #brand:  100 docs/server, 5 keys/server [POOR]
+
+RECOMMENDATION: Use #IDP for most collections (balanced distribution)
+"""
+        self.output.insert(tk.END, sharding_text)
+
+    def _show_operators_dialog(self):
+        """Open dialog to run operators and display results."""
+        dlg = tk.Toplevel(self)
+        dlg.title("Operators")
+        dlg.geometry("640x360")
+
+        frm = ttk.Frame(dlg, padding=12)
+        frm.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(frm, text="Operator:", style="Body.TLabel").grid(row=0, column=0, sticky=tk.W)
+        op_var = tk.StringVar(value="filter_with_sharding")
+        op_combo = ttk.Combobox(frm, textvariable=op_var, state="readonly", width=30)
+        op_combo['values'] = [
+            'filter_with_sharding',
+            'filter_without_sharding',
+            'nested_loop_with_sharding',
+            'nested_loop_without_sharding',
+        ]
+        op_combo.grid(row=0, column=1, sticky=tk.W, pady=4)
+
+        ttk.Label(frm, text="Schema (left):", style="Body.TLabel").grid(row=1, column=0, sticky=tk.W)
+        left_var = tk.StringVar()
+        left_combo = ttk.Combobox(frm, textvariable=left_var, state="readonly", width=48)
+        left_combo['values'] = [os.path.basename(p) for p in self.schema_files]
+        left_combo.grid(row=1, column=1, sticky=tk.W, pady=4)
+
+        ttk.Label(frm, text="Schema (right, for joins):", style="Body.TLabel").grid(row=2, column=0, sticky=tk.W)
+        right_var = tk.StringVar()
+        right_combo = ttk.Combobox(frm, textvariable=right_var, state="readonly", width=48)
+        right_combo['values'] = [os.path.basename(p) for p in self.schema_files]
+        right_combo.grid(row=2, column=1, sticky=tk.W, pady=4)
+
+        ttk.Label(frm, text="Filtered key:", style="Body.TLabel").grid(row=3, column=0, sticky=tk.W)
+        key_var = tk.StringVar()
+        ttk.Entry(frm, textvariable=key_var, width=30).grid(row=3, column=1, sticky=tk.W, pady=4)
+
+        ttk.Label(frm, text="Expected output keys (comma separated):", style="Body.TLabel").grid(row=4, column=0, sticky=tk.W)
+        outkeys_var = tk.StringVar()
+        ttk.Entry(frm, textvariable=outkeys_var, width=48).grid(row=4, column=1, sticky=tk.W, pady=4)
+
+        ttk.Label(frm, text="Selectivity (optional 0.0-1.0):", style="Body.TLabel").grid(row=5, column=0, sticky=tk.W)
+        sel_var = tk.StringVar()
+        ttk.Entry(frm, textvariable=sel_var, width=12).grid(row=5, column=1, sticky=tk.W, pady=4)
+
+        result_box = tk.Text(frm, height=10, bg="#ffffff", font=("Consolas", 10))
+        result_box.grid(row=6, column=0, columnspan=2, sticky="nsew", pady=(8,0))
+        frm.rowconfigure(6, weight=1)
+
+        def _run_op():
+            op = op_var.get()
+            left_name = left_var.get()
+            right_name = right_var.get()
+            key = key_var.get().strip()
+            outkeys = [k.strip() for k in outkeys_var.get().split(',') if k.strip()]
+            selectivity = None
+            if sel_var.get().strip():
+                try:
+                    selectivity = float(sel_var.get().strip())
+                except Exception:
+                    messagebox.showerror("Error", "Selectivity must be a number between 0 and 1.")
+                    return
+
+            if not left_name:
+                messagebox.showwarning("Missing schema", "Please select a left schema.")
+                return
+
+            # Resolve schema paths
+            left_path = None
+            right_path = None
+            for p in self.schema_files:
+                if os.path.basename(p) == left_name:
+                    left_path = p
+                if os.path.basename(p) == right_name:
+                    right_path = p
+
+            try:
+                left_schema = load_json(left_path) if left_path else {}
+                right_schema = load_json(right_path) if right_path else {}
+            except Exception as exc:
+                messagebox.showerror("Error", f"Cannot load schema:\n{exc}")
+                return
+
+            # Create collection objects
+            left_count = guess_default_doc_count(os.path.basename(left_path) if left_path else '', self.stats)
+            right_count = guess_default_doc_count(os.path.basename(right_path) if right_path else '', self.stats)
+
+            left_coll = Collection(name=os.path.basename(left_path) if left_path else 'left', schema=left_schema or {}, stats=self.stats, document_count=left_count)
+            right_coll = Collection(name=os.path.basename(right_path) if right_path else 'right', schema=right_schema or {}, stats=self.stats, document_count=right_count)
+
+            try:
+                if op == 'filter_with_sharding':
+                    res = filter_with_sharding(left_coll, outkeys, key, selectivity)
+                elif op == 'filter_without_sharding':
+                    res = filter_without_sharding(left_coll, outkeys, key, selectivity)
+                elif op == 'nested_loop_with_sharding':
+                    res = nested_loop_with_sharding(left_coll, right_coll, outkeys, key, selectivity, stats=self.stats)
+                elif op == 'nested_loop_without_sharding':
+                    res = nested_loop_without_sharding(left_coll, right_coll, outkeys, key, selectivity, stats=self.stats)
+                else:
+                    messagebox.showerror("Error", f"Unknown operator: {op}")
+                    return
+            except Exception as exc:
+                messagebox.showerror("Error", f"Operator failed:\n{exc}")
+                return
+
+            # Pretty print result into result_box and main output
+            result_box.delete('1.0', tk.END)
+            import pprint
+            result_box.insert(tk.END, pprint.pformat(res, indent=2))
+
+            # Also push to main output for visibility
+            self.output.delete('1.0', tk.END)
+            self.output.insert(tk.END, f"Operator: {op}\n")
+            self.output.insert(tk.END, pprint.pformat(res, indent=2))
+
+        btn_frame = ttk.Frame(frm)
+        btn_frame.grid(row=7, column=0, columnspan=2, sticky=tk.EW, pady=6)
+        ttk.Button(btn_frame, text="Run", style="Blue.TButton", command=_run_op).pack(side=tk.RIGHT)
+        ttk.Button(btn_frame, text="Close", command=dlg.destroy).pack(side=tk.RIGHT, padx=6)
+
 
 
 if __name__ == "__main__":
