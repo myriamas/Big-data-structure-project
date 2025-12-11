@@ -141,6 +141,9 @@ class BigDataGui(tk.Tk):
             # non-fatal: continue without menubar if platform/theme disallows it
             pass
 
+        # Status bar text
+        self.status_var = tk.StringVar(value="Ready")
+
 
         self._configure_style()
         self._create_widgets()
@@ -241,12 +244,12 @@ class BigDataGui(tk.Tk):
             foreground="#606b7d",
             wraplength=820,
             justify="left",
-        )
-        info.grid(row=3, column=0, columnspan=4, sticky=tk.W, pady=(8, 5))
-
-        # Advanced Options (subtle)
-        options_frame = ttk.Frame(main)
-        options_frame.grid(row=3, column=0, columnspan=4, sticky=tk.W, pady=(15, 5))
+            ttk.Button(
+                main,
+                text="Compute sizes",
+                style="Blue.TButton",
+                command=self._run_computation,
+            ).grid(row=2, column=2, padx=5, pady=5)
         
         ttk.Label(options_frame, text="Options:", font=("Segoe UI", 9), foreground="#888").pack(side=tk.LEFT)
         ttk.Button(options_frame, text="[Compare DBs]", command=self._show_db_comparison).pack(side=tk.LEFT, padx=5)
@@ -293,6 +296,12 @@ class BigDataGui(tk.Tk):
             self.schema_combo.current(0)
             self._update_doc_count(names[0])
         else:
+            # Status bar at bottom
+            status = ttk.Frame(self)
+            status.pack(side=tk.BOTTOM, fill=tk.X)
+            ttk.Separator(status, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, 2))
+            status_label = ttk.Label(status, textvariable=self.status_var, style="Body.TLabel")
+            status_label.pack(side=tk.LEFT, padx=8, pady=4)
             self.schema_combo.set("")
             self.doc_count_var.set("")
 
@@ -309,6 +318,11 @@ class BigDataGui(tk.Tk):
 
         default_docs = guess_default_doc_count(os.path.basename(schema_path), self.stats)
         self.doc_count_var.set(str(default_docs))
+        # update status
+        try:
+            self.status_var.set(f"Selected: {os.path.basename(schema_path)} — docs: {default_docs:,}")
+        except Exception:
+            pass
 
     def _on_schema_changed(self, event=None):
         name = self.schema_var.get()
@@ -399,6 +413,11 @@ class BigDataGui(tk.Tk):
         )
         header = f"Mode: JSON Schema\nSchema file: {schema_path}"
         self._compute_and_display(collection, extra_header=header)
+        # update status after computation
+        try:
+            self.status_var.set(f"Computed sizes for {os.path.basename(schema_path)} ({document_count:,} docs)")
+        except Exception:
+            pass
 
     def _infer_from_sample_dialog(self):
         path = filedialog.askopenfilename(
