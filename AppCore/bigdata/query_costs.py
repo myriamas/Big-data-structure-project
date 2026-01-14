@@ -105,8 +105,9 @@ class QueryCostAnalyzer:
             return docs_per_server * SHARD_SCAN_TIME_PER_DOC_MS
         
         elif self.algorithm == 'nested_loop':
-            # Nested loop: slower, but distributed
-            return self.documents_scanned * SHARD_SCAN_TIME_PER_DOC_MS * 2
+            # Nested loop: documents_scanned represents total comparisons (outer × inner)
+            # Each comparison takes SHARD_SCAN_TIME_PER_DOC_MS
+            return self.documents_scanned * SHARD_SCAN_TIME_PER_DOC_MS
         
         elif self.algorithm == 'full_scan':
             # Full scan: slowest

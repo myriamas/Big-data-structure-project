@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python Scripts/run_integration.py:*)",
+      "Bash(python test_package.py:*)",
+      "Bash(python Scripts/run_operators.py:*)"
+    ]
+  }
+}

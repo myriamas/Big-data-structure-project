@@ -10,7 +10,7 @@ Main components:
 - sharding.py: Sharding distribution analysis
 - query_costs.py: Query cost analysis (time, carbon, price)
 - queries.py: Query execution simulation
-- operators.py: DVL operators (filter, nested-loop with/without sharding)
+- operators.py: DVL operators (filter, nested-loop, aggregate with/without sharding)
 """
 
 from .models import Collection
@@ -28,9 +28,12 @@ from .operators import (
     filter_without_sharding,
     nested_loop_with_sharding,
     nested_loop_without_sharding,
+    aggregate_with_sharding,
+    aggregate_without_sharding,
 )
+from .integration import QueryPlan, IntegrationExecutor
 
-__version__ = "1.0.0"
+__version__ = "1.2.0"
 __author__ = "BDS Project Team"
 
 __all__ = [
@@ -46,4 +49,8 @@ __all__ = [
     "filter_without_sharding",
     "nested_loop_with_sharding",
     "nested_loop_without_sharding",
+    "aggregate_with_sharding",
+    "aggregate_without_sharding",
+    "QueryPlan",
+    "IntegrationExecutor",
 ]

@@ -1,6 +1,6 @@
 """Unit tests for operators module.
 
-Tests the four operators (filter with/without sharding and nested-loop with/without sharding)
+Tests the six operators (filter, nested-loop, aggregate with/without sharding)
 to verify cost computation, output counts, and edge cases.
 """
 
@@ -20,6 +20,8 @@ from AppCore.bigdata.operators import (
     filter_without_sharding,
     nested_loop_with_sharding,
     nested_loop_without_sharding,
+    aggregate_with_sharding,
+    aggregate_without_sharding,
 )
 
 
@@ -243,6 +245,178 @@ class TestOutputSizeComputation(unittest.TestCase):
         # Higher selectivity should produce more docs and more bytes
         self.assertGreater(result2['output_docs'], result1['output_docs'])
         self.assertGreater(result2['output_bytes'], result1['output_bytes'])
+
+
+class TestAggregateOperators(unittest.TestCase):
+    """Test aggregate operators (Part 4)."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Load schemas and stats once."""
+        base = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'AppCore', 'schema'))
+        stats_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'AppCore', 'stats.json'))
+
+        cls.stats = {}
+        if os.path.exists(stats_path):
+            with open(stats_path, 'r', encoding='utf-8') as f:
+                cls.stats = json.load(f)
+
+        # Load orderline schema if available, else use a simple one
+        orderline_path = os.path.join(base, 'db4_orderline_schema.json')
+        if os.path.exists(orderline_path):
+            with open(orderline_path, 'r', encoding='utf-8') as f:
+                cls.orderline_schema = json.load(f)
+        else:
+            cls.orderline_schema = {
+                'properties': {
+                    'idp': {'type': 'integer'},
+                    'idc': {'type': 'integer'},
+                    'quantity': {'type': 'integer'},
+                    'date': {'type': 'string'}
+                }
+            }
+
+        with open(os.path.join(base, 'product_schema.json'), 'r', encoding='utf-8') as f:
+            cls.product_schema = json.load(f)
+
+        cls.orderline_collection = Collection(
+            'orderline',
+            cls.orderline_schema,
+            cls.stats,
+            document_count=cls.stats.get('nb_orderlines', 4_000_000_000)
+        )
+
+        cls.product_collection = Collection(
+            'product',
+            cls.product_schema,
+            cls.stats,
+            document_count=cls.stats.get('nb_products', 100000)
+        )
+
+    def test_aggregate_with_sharding_basic(self):
+        """Test aggregate_with_sharding returns expected keys."""
+        result = aggregate_with_sharding(
+            self.orderline_collection,
+            group_key='idp',
+            aggregate_functions=['SUM', 'COUNT']
+        )
+
+        # Check structure
+        self.assertIn('operator', result)
+        self.assertEqual(result['operator'], 'aggregate_with_sharding')
+        self.assertIn('group_key', result)
+        self.assertIn('num_groups', result)
+        self.assertIn('output_docs', result)
+        self.assertIn('output_bytes', result)
+        self.assertIn('cost', result)
+
+        # Output docs should equal num_groups (one per group)
+        self.assertEqual(result['output_docs'], result['num_groups'])
+
+        # Cost should have expected keys
+        self.assertIn('algorithm', result['cost'])
+        self.assertEqual(result['cost']['algorithm'], 'map_reduce')
+        self.assertIn('phases', result['cost'])
+
+    def test_aggregate_without_sharding_basic(self):
+        """Test aggregate_without_sharding returns expected keys."""
+        result = aggregate_without_sharding(
+            self.product_collection,
+            group_key='brand',
+            aggregate_functions=['COUNT']
+        )
+
+        self.assertIn('operator', result)
+        self.assertEqual(result['operator'], 'aggregate_without_sharding')
+        self.assertIn('cost', result)
+        self.assertEqual(result['cost']['algorithm'], 'full_scan_aggregate')
+
+    def test_aggregate_num_groups_estimation(self):
+        """Test that group cardinality is estimated correctly."""
+        # Group by brand should have ~5000 groups
+        result_brand = aggregate_with_sharding(
+            self.product_collection,
+            group_key='brand',
+            aggregate_functions=['COUNT']
+        )
+        self.assertEqual(result_brand['num_groups'], self.stats.get('distinct_brands', 5000))
+
+        # Group by product ID should have ~100K groups
+        result_idp = aggregate_with_sharding(
+            self.orderline_collection,
+            group_key='idp',
+            aggregate_functions=['SUM']
+        )
+        self.assertEqual(result_idp['num_groups'], self.stats.get('nb_products', 100000))
+
+    def test_aggregate_with_filter(self):
+        """Test aggregate with filter reduces groups."""
+        # Without filter
+        result_no_filter = aggregate_with_sharding(
+            self.orderline_collection,
+            group_key='idp',
+            aggregate_functions=['SUM']
+        )
+
+        # With filter (e.g., specific client)
+        result_filtered = aggregate_with_sharding(
+            self.orderline_collection,
+            group_key='idp',
+            aggregate_functions=['SUM'],
+            filter_key='idc',
+            selectivity=0.0001  # Very selective
+        )
+
+        # Filtered should scan fewer docs
+        self.assertLess(result_filtered['docs_scanned'], result_no_filter['docs_scanned'])
+
+    def test_aggregate_sharding_vs_no_sharding_cost(self):
+        """Sharded aggregate should be cheaper than unsharded."""
+        sharded = aggregate_with_sharding(
+            self.product_collection,
+            group_key='brand',
+            aggregate_functions=['COUNT', 'SUM']
+        )
+
+        unsharded = aggregate_without_sharding(
+            self.product_collection,
+            group_key='brand',
+            aggregate_functions=['COUNT', 'SUM']
+        )
+
+        # Sharded should have lower time and cost
+        self.assertLess(sharded['cost']['time_ms'], unsharded['cost']['time_ms'])
+        self.assertLess(sharded['cost']['price_usd'], unsharded['cost']['price_usd'])
+
+    def test_aggregate_output_size_small(self):
+        """Aggregate output should be much smaller than input."""
+        result = aggregate_with_sharding(
+            self.orderline_collection,
+            group_key='idp',
+            aggregate_functions=['SUM']
+        )
+
+        # Output should be much smaller than scanning 4B docs
+        # Even with 100K groups, output bytes should be reasonable
+        self.assertLess(result['output_bytes'], 100_000_000)  # Less than 100MB
+        self.assertLess(result['output_docs'], self.orderline_collection.document_count)
+
+    def test_aggregate_phases_present(self):
+        """Test that all Map/Reduce phases are reported."""
+        result = aggregate_with_sharding(
+            self.orderline_collection,
+            group_key='idp',
+            aggregate_functions=['SUM']
+        )
+
+        phases = result['cost'].get('phases', {})
+        self.assertIn('map_time_ms', phases)
+        self.assertIn('shuffle_time_ms', phases)
+        self.assertIn('reduce_time_ms', phases)
+
+        # Total time should be sum of phases
+        total = phases['map_time_ms'] + phases['shuffle_time_ms'] + phases['reduce_time_ms']
+        self.assertAlmostEqual(result['cost']['time_ms'], total, places=5)
 
 
 if __name__ == '__main__':
